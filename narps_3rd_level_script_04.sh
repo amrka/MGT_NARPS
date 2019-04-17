@@ -164,8 +164,8 @@ cd /media/amr/Amr_4TB/NARPS/output_narps_proc_3rd_level/
 
 
 
-mkdir gain_stat_flameo
-mkdir loss_stat_flameo
+mkdir gain_stat_flameo_neg
+mkdir loss_stat_flameo_neg
 
 
 
@@ -175,7 +175,7 @@ flameo \
 --cope=/media/amr/Amr_4TB/NARPS/output_narps_proc_3rd_level/gain.nii.gz \
 --vc=/media/amr/Amr_4TB/NARPS/output_narps_proc_3rd_level/gain_varcope.nii.gz \
 --mask=/Volumes/Amr_1TB/NARPS/narps_templateBrainExtractionMask.nii.gz \
---ld=/media/amr/Amr_4TB/NARPS/output_narps_proc_3rd_level/gain_stat_flameo/ \
+--ld=/media/amr/Amr_4TB/NARPS/output_narps_proc_3rd_level/gain_stat_flameo_neg \
 --dm=/media/amr/Amr_4TB/NARPS/output_narps_proc_3rd_level/unpaired_ttest_108_subject.mat \
 --cs=/media/amr/Amr_4TB/NARPS/output_narps_proc_3rd_level/unpaired_ttest_108_subject.grp \
 --tc=/media/amr/Amr_4TB/NARPS/output_narps_proc_3rd_level/unpaired_ttest_108_subject.con \
@@ -187,7 +187,7 @@ flameo \
 --cope=/media/amr/Amr_4TB/NARPS/output_narps_proc_3rd_level/loss.nii.gz \
 --vc=/media/amr/Amr_4TB/NARPS/output_narps_proc_3rd_level/loss_varcope.nii.gz \
 --mask=/Volumes/Amr_1TB/NARPS/narps_templateBrainExtractionMask.nii.gz \
---ld=/media/amr/Amr_4TB/NARPS/output_narps_proc_3rd_level/loss_stat_flameo/ \
+--ld=/media/amr/Amr_4TB/NARPS/output_narps_proc_3rd_level/loss_stat_flameo_neg \
 --dm=/media/amr/Amr_4TB/NARPS/output_narps_proc_3rd_level/unpaired_ttest_108_subject.mat \
 --cs=/media/amr/Amr_4TB/NARPS/output_narps_proc_3rd_level/unpaired_ttest_108_subject.grp \
 --tc=/media/amr/Amr_4TB/NARPS/output_narps_proc_3rd_level/unpaired_ttest_108_subject.con \
@@ -198,6 +198,13 @@ flameo \
 
 
 
+#Transform to MNI space
+#apply them later in the post_fitting script
+
+antsRegistrationSyN.sh \
+-m /Volumes/Amr_1TB_NARPS/narps_template_brain.nii.gz \
+-f /usr/local/fsl/data/standard/MNI152_T1_1mm_brain.nii.gz \
+-n 8 -o /Volumes/Amr_1TB_NARPS/narps_to_MNI_1mm_
 
 
 
