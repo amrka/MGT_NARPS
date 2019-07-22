@@ -31,10 +31,6 @@ experiment_dir = '/media/amr/Amr_4TB/NARPS/'
 
 task_list = ['gain','loss']
 
-              
-
-
-
 
 zstat_list = ['zstat1', 
               'zstat2',
@@ -87,9 +83,7 @@ MNI_1mm = '/usr/local/fsl/data/standard/MNI152_T1_1mm_brain.nii.gz'
 
 templates = {
 
-
           'zstat'           :  '/media/amr/Amr_4TB/NARPS/output_narps_proc_3rd_level/{tasks}_stat_flameo_neg/+/{zstats}.nii.gz',
-
         }
 
 
@@ -159,6 +153,8 @@ def cluster_zstats(zstat, volume, dlh):
 
         import nipype.interfaces.fsl as fsl
         import os
+
+
         study_mask = '/Volumes/Amr_1TB/NARPS/narps_templateBrainExtractionMask.nii.gz'
 
         cope_no = zstat[-8] #number of the zstat file after taking into account .nii.gz
@@ -177,7 +173,7 @@ def cluster_zstats(zstat, volume, dlh):
 
 
 
-        cluster_zstats = fsl.model.Cluster()
+        cluster_zstats = fsl.Cluster()
 
         cluster_zstats.inputs.in_file = masked_zstat
         cluster_zstats.inputs.cope_file = cope
@@ -188,44 +184,46 @@ def cluster_zstats(zstat, volume, dlh):
         cluster_zstats.inputs.dlh = dlh
 
         cluster_zstats.inputs.out_threshold_file = 'thresh_zstat.nii.gz'
-        cluster_zstats.inputs.out_index_file = 'cluster_mask_zstat'
+        cluster_zstats.inputs.out_index_file = 'cluster_mask_zstat.nii.gz'
         cluster_zstats.inputs.out_localmax_txt_file = 'lmax_zstat_std.txt'
         cluster_zstats.inputs.use_mm = True
-        cluster_zstats.cmdline
+        print(cluster_zstats.cmdline)
+
 
 
         cluster_zstats_outputs = cluster_zstats.run()
 
         threshold_file = cluster_zstats_outputs.outputs.threshold_file
 
-        return threshold_file
+
+
+
+        return  masked_zstat, threshold_file   
 
 cluster_zstats = Node(name = 'cluster_zstats',
                   interface = Function(input_names = ['zstat', 'volume', 'dlh'],
-                  output_names = ['threshold_file'],
+                  output_names = ['threshold_file', 'masked_zstat'],
                   function = cluster_zstats))
 
-#========================================================================================================================================================
+#==========================================================================================================================================================
 #Move the images to MNI space with precalculated transformations
-transform_2_MNI = Node(ants.ApplyTransforms(), name='transform_2_MNI')
-transform_2_MNI.inputs.reference_image = MNI_1mm
-transform_2_MNI.inputs.transforms = '/Volumes/Amr_1TB/NARPS/narps_to_MNI_1mm_Composite.h5'
-transform_2_MNI.inputs.dimension = 3
-transform_2_MNI.inputs.output_image = 'unthreshold_file_MNI.nii.gz'
+unthresh_2_MNI = Node(ants.ApplyTransforms(), name='unthresh_2_MNI')
+unthresh_2_MNI.inputs.reference_image = MNI_1mm
+unthresh_2_MNI.inputs.transforms = '/Volumes/Amr_1TB/NARPS/narps_to_MNI_1mm_Composite.h5'
+unthresh_2_MNI.inputs.dimension = 3
+unthresh_2_MNI.inputs.output_image = 'unthreshold_file_MNI.nii.gz'
 
 
-#=========================================================================================================================================================
+#==========================================================================================================================================================
 #threshold the maps to 3.1 to make it ready for submission
-apply_thresh = Node(fsl.Threshold(), name='apply_threshold_3_1')
-apply_thresh.inputs.thresh = 3.1
-apply_thresh.inputs.out_file = 'threshold_file_MNI.nii.gz'
+thresh_2_MNI = unthresh_2_MNI.clone(name='thresh_2_MNI')
 
 #==========================================================================================================================================================
 #overlay thresh_zstat1
 
 overlay_zstat = Node(fsl.Overlay(), name='overlay')
 overlay_zstat.inputs.auto_thresh_bg = True
-overlay_zstat.inputs.stat_thresh = (3.1,10)
+overlay_zstat.inputs.stat_thresh = (3.1,10) #threshold positive and negative
 overlay_zstat.inputs.transparency = True
 overlay_zstat.inputs.out_file = 'rendered_thresh_zstat.nii.gz'
 overlay_zstat.inputs.show_negative_stats = True
@@ -243,12 +241,6 @@ slicer_zstat.inputs.out_file = 'rendered_thresh_zstat.png'
 
 
 
-
-
-
-
-
-
 proc_3rd_level.connect([
 
 
@@ -256,27 +248,26 @@ proc_3rd_level.connect([
                                          ('zstats','zstats')]),
 
 
-
               (selectfiles, smooth_est, [('zstat','zstat')]),
-
 
 
               (selectfiles, cluster_zstats, [('zstat','zstat')]), #I need the original file to get the number and then i mask it inside the function
               (smooth_est, cluster_zstats, [('volume','volume'),
                                             ('dlh','dlh')]),
 
-              (cluster_zstats, transform_2_MNI, [('threshold_file','input_image')]),
+              (cluster_zstats, unthresh_2_MNI, [('masked_zstat','input_image')]),
 
-              (transform_2_MNI, apply_thresh, [('output_image','in_file')]),
+              (cluster_zstats, thresh_2_MNI, [('threshold_file','input_image')]),
 
 
-              (transform_2_MNI, overlay_zstat, [('output_image','stat_image')]),
+              (thresh_2_MNI, overlay_zstat, [('output_image','stat_image')]),
 
               (overlay_zstat, slicer_zstat, [('out_file','in_file')]),
 
-              (transform_2_MNI, datasink, [('output_image','unthreshold_file')]),
-              (apply_thresh, datasink, [('out_file','threshold_file')]),
-              (slicer_zstat, datasink, [('out_file','activation_pic')])
+              (unthresh_2_MNI, datasink, [('output_image','unthreshold_file')]),
+              (thresh_2_MNI, datasink, [('output_image','threshold_file')]),
+              (slicer_zstat, datasink, [('out_file','activation_pic')]),
+
 
 
               ])
@@ -284,8 +275,3 @@ proc_3rd_level.connect([
 proc_3rd_level.write_graph(graph2use='colored', format='png', simple_form=True)
 
 proc_3rd_level.run('MultiProc', plugin_args={'n_procs': 8})
-
-
-
-
-
