@@ -1,5 +1,6 @@
 # Mixed_Gambling_Task, NARPS replication Study
-#=====================================================================================\n
+#=====================================================================================
+
 -Mistakes with NARPS: 
 
 1- you did not connect McFlirt to rest of pipeline 
